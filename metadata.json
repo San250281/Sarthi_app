@@ -1,0 +1,6 @@
+{
+  "name": "Saarthi",
+  "description": "Saarthi - Helping You Move Forward. An emotionally intelligent AI voice companion designed to help navigate life with clarity, confidence, and support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
