@@ -18,6 +18,12 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    buildConfigField(
+      "String",
+      "RAZORPAY_API_KEY",
+      "\"${project.findProperty("RAZORPAY_API_KEY") ?: ""}\""
+    )
   }
 
   signingConfigs {
@@ -28,12 +34,7 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
+
   }
 
   buildTypes {
@@ -44,7 +45,7 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
+      // Use default Android Studio debug signing
     }
   }
   compileOptions {
