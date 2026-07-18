@@ -1,11 +1,23 @@
+local.properties
 node_modules/
-build/
 dist/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+.env
+
+# Android
+.idea/
+.gradle/
+build/
+app/build/
+
+# Signing and secret files
+*.keystore
+*.jks
+secrets.properties
 
 # Local configuration and secrets
 local.properties
