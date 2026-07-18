@@ -1,24 +1,22 @@
 package com.aistudio.saarthi.api
 
 import android.util.Log
-import com.aistudio.saarthi.BuildConfig
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 @JsonClass(generateAdapter = true)
 data class GeminiInlineData(
     val mimeType: String,
-    val data: String // base64 encoded audio
+    val data: String
 )
 
 @JsonClass(generateAdapter = true)
@@ -34,36 +32,31 @@ data class GeminiContent(
 )
 
 @JsonClass(generateAdapter = true)
-data class GeminiSystemInstruction(
-    val parts: List<GeminiPart>
+data class SaarthiApiRequest(
+    val userId: String,
+    val message: String
 )
 
 @JsonClass(generateAdapter = true)
-data class GeminiRequest(
-    val contents: List<GeminiContent>,
-    val systemInstruction: GeminiSystemInstruction? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class GeminiCandidate(
-    val content: GeminiContent? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class GeminiResponse(
-    val candidates: List<GeminiCandidate>? = null
+data class SaarthiApiResponse(
+    val conversationId: String? = null,
+    val reply: String? = null,
+    val error: String? = null
 )
 
 object GeminiClient {
-    private const val TAG = "SAARTHI_GEMINI"
-    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
+
+    private const val TAG = "SAARTHI_AWS_API"
+
+    private const val API_URL =
+        "https://vw4l7d1ezh.execute-api.us-east-1.amazonaws.com/prod/chat"
 
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    private val requestAdapter = moshi.adapter(GeminiRequest::class.java)
-    private val responseAdapter = moshi.adapter(GeminiResponse::class.java)
+    private val requestAdapter = moshi.adapter(SaarthiApiRequest::class.java)
+    private val responseAdapter = moshi.adapter(SaarthiApiResponse::class.java)
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
@@ -75,94 +68,63 @@ object GeminiClient {
         history: List<GeminiContent>,
         systemPrompt: String
     ): String = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
-            Log.e(TAG, "API Key is missing or default placeholder!")
-            return@withContext "The AI service is temporarily unavailable. Please configure your GEMINI_API_KEY securely in the Secrets panel in AI Studio."
-        }
 
-        val requestBodyData = GeminiRequest(
-            contents = history,
-            systemInstruction = GeminiSystemInstruction(
-                parts = listOf(GeminiPart(text = systemPrompt))
+        try {
+            val latestUserMessage = history.lastOrNull()
+                ?.parts
+                ?.firstOrNull()
+                ?.text
+                ?: "Hello"
+
+            val finalMessage = """
+                $systemPrompt
+
+                User message:
+                $latestUserMessage
+            """.trimIndent()
+
+            val requestBodyData = SaarthiApiRequest(
+                userId = "test-user-001",
+                message = finalMessage
             )
-        )
 
-        val jsonString = requestAdapter.toJson(requestBodyData)
-        // Log request info safely (excluding key, but showing history size and prompt info)
-        Log.d(TAG, "Outgoing Gemini API Request: History size = ${history.size}, Prompt length = ${systemPrompt.length}")
+            val jsonString = requestAdapter.toJson(requestBodyData)
 
-        val jsonMediaType = "application/json; charset=utf-8".toMediaType()
-        val requestBody = jsonString.toRequestBody(jsonMediaType)
+            val requestBody = jsonString.toRequestBody(
+                "application/json; charset=utf-8".toMediaType()
+            )
 
-        val apiRequest = Request.Builder()
-            .url("$BASE_URL?key=$apiKey")
-            .post(requestBody)
-            .build()
+            val request = Request.Builder()
+                .url(API_URL)
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer eyJraWQiOiJMWXJHMG9PYWlnQTB5NG1vb2lXSDloZGNVaytUZ21ncFV0QnB4Tm42TzNrPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIyNDE4MTRlOC1hMDcxLTcwNjQtMWFhNy1kNWYxM2Q3N2M1MTYiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6Ly9jb2duaXRvLWlkcC51cy1lYXN0LTEuYW1hem9uYXdzLmNvbS91cy1lYXN0LTFfMWRiQXpCMXY5IiwiY29nbml0bzp1c2VybmFtZSI6IjI0MTgxNGU4LWEwNzEtNzA2NC0xYWE3LWQ1ZjEzZDc3YzUxNiIsIm9yaWdpbl9qdGkiOiI2Y2M4NWJkYi0xNmNjLTRhYWMtYjBhYS03MTVjMDUwYzQxNzIiLCJhdWQiOiI3cjVuY284OTJpZnF0cnFxdGoybm5wanJvcSIsImV2ZW50X2lkIjoiYjg3ZTYyZTctNjRjZC00NmUzLTk0NDQtZTEzZjk5MjMyZTJjIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3ODQyMDg1MzgsImV4cCI6MTc4NDIxMjEzOCwiaWF0IjoxNzg0MjA4NTM4LCJqdGkiOiJlYzViNjgwMS05NDNmLTRkMDItOGMyZS1jM2RkZDAwNzMyYzYiLCJlbWFpbCI6Imxpc2Fzb3JvMTk4OUBnbWFpbC5jb20ifQ.MrCEdbtgBKztsmetH0zCbQL9AMFvGnc-ICIfnAgPBWCJIA8Ucv4l0aZL46NM1b2DJ2yj4TBErH9rPdjI1EmgR9taRPdIYUd6mxG6gh6TFRuHIfN2SGzrONI3gBhbRQimReTIhwehJKqbBBiLbIsogAjhEhujv_09LkJAefsZiZ_PAz5_35kZkWPuCYWU9KY92qwl58jTUhJGBrrxSQzr3yAT5VfMD99d-QGB3-sM7iHOGNxws86K2C33sl2LZtWup3dZSiYK45kwG9MVS937sHepQ_7OmS4UwvukDqEmpqHlK6IkJ5Gj65Sqn9fGS3eGuiBJXp3g0XhXoOruYwGgeQ")
+                .build()
+            val response = client.newCall(request).execute()
+            val code = response.code
+            val bodyString = response.body?.string()
 
-        var maxRetries = 3
-        var attempt = 0
-        var lastErrorMsg = "Failed to communicate with AI model. Please try again."
+            Log.d(TAG, "AWS API Response Code: $code")
+            Log.d(TAG, "AWS API Response Body: $bodyString")
 
-        while (attempt < maxRetries) {
-            attempt++
-            try {
-                Log.d(TAG, "Sending API request, attempt $attempt of $maxRetries ...")
-                val response = client.newCall(apiRequest).execute()
-                val code = response.code
-                val bodyString = response.body?.string()
+            if (response.isSuccessful && bodyString != null) {
 
-                if (response.isSuccessful && bodyString != null) {
-                    val geminiResponse = responseAdapter.fromJson(bodyString)
-                    val textResponse = geminiResponse?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                    if (textResponse != null) {
-                        Log.d(TAG, "Gemini API Response Success: Output length = ${textResponse.length}")
-                        return@withContext textResponse
-                    } else {
-                        Log.w(TAG, "Successful response but no candidates/text was returned.")
-                        lastErrorMsg = "I heard you, but I couldn't formulate a response. Can you repeat that, please?"
-                        // No retry for empty response structure as it's not a network error
-                        break
-                    }
-                } else {
-                    Log.e(TAG, "Unsuccessful response code = $code, Body = $bodyString")
-                    lastErrorMsg = when (code) {
-                        400 -> "Input formatting issue or invalid request structure (400 Bad Request)."
-                        401 -> "API key is invalid. Please configure your authentic GEMINI_API_KEY in the Secrets panel."
-                        403 -> "Access is denied (403 Forbidden). Please check your API key credentials."
-                        404 -> "Model not found (404 Not Found). The requested model 'gemini-3.5-flash' could not be resolved."
-                        429 -> "The AI service is experiencing high traffic (429 Rate Limit). Trying again in a moment..."
-                        500 -> "The AI service is temporarily unavailable (500 Internal Server Error)."
-                        else -> "Encountered technical issue ($code) during processing. Please try again."
-                    }
+                Log.d(TAG, "FULL RESPONSE BODY: $bodyString")
 
-                    // For highly transient errors, perform backoff delay and retry
-                    if (code == 429 || code >= 500) {
-                        if (attempt < maxRetries) {
-                            val backoff = attempt * 1500L
-                            Log.w(TAG, "Retrying transient HTTP error $code in ${backoff}ms...")
-                            delay(backoff)
-                            continue
-                        }
-                    }
-                    // For client setup issues like 401, 403, 404, we break immediately
-                    break
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "Network connection error on attempt $attempt: ${e.message}", e)
-                lastErrorMsg = "Please check your internet connection."
-                if (attempt < maxRetries) {
-                    val backoff = attempt * 1500L
-                    delay(backoff)
-                    continue
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error: ${e.message}", e)
-                lastErrorMsg = "The AI service is temporarily unavailable."
-                break
+                val apiResponse = responseAdapter.fromJson(bodyString)
+
+                return@withContext apiResponse?.reply
+                    ?: apiResponse?.error
+                    ?: bodyString
             }
-        }
+            return@withContext "Server error: $code. Please try again."
 
-        return@withContext lastErrorMsg
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error: ${e.message}", e)
+            return@withContext "Please check your internet connection."
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error: ${e.message}", e)
+            return@withContext "Unable to connect to Saarthi server."
+        }
     }
 }

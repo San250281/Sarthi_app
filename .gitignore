@@ -18,3 +18,22 @@ app/build/
 *.keystore
 *.jks
 secrets.properties
+
+# Local configuration and secrets
+local.properties
+.env
+secrets.properties
+*.jks
+*.keystore
+
+# Android Studio
+.idea/
+.gradle/
+*.iml
+
+# Build outputs
+app/build/
+
+# Operating system files
+.DS_Store
+Thumbs.db

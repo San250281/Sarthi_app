@@ -314,14 +314,7 @@ class SaarthiViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         // App startup logs & API Key validation
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        Log.i("SAARTHI_APP", "Saarthi App initialized. Checking Gemini API Key...")
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
-            Log.e("SAARTHI_APP", "CRITICAL: Gemini API key is missing or is default placeholder!")
-            _errorMessage.value = "The Gemini API Key is missing. Please configure your key securely in the Secrets panel in AI Studio."
-        } else {
-            Log.i("SAARTHI_APP", "Gemini API key loaded successfully. Length: ${apiKey.length} characters.")
-        }
+        Log.i("SAARTHI_APP", "Saarthi App initialized. Using AWS Lambda backend.")
 
         // Build TTS Engine
         ttsEngine = SpeechTextToSpeech(
@@ -947,9 +940,6 @@ Always end with helping people move forward, one concise conversation at a time.
 
     private fun scanAndExtractMemory(userMessage: String, responseText: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val apiKey = BuildConfig.GEMINI_API_KEY
-            if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") return@launch
-
             if (!com.aistudio.saarthi.util.NetworkUtils.isNetworkAvailable(getApplication())) {
                 Log.w("SAARTHI_GEMINI", "Offline: skipping background memory extraction scan.")
                 return@launch
