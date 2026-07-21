@@ -98,16 +98,7 @@ object GeminiClient {
                 .url(API_URL)
                 .post(requestBody)
                 .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer eyJraWQiOiJMWXJHMG9PYWlnQTB5NG1vb2lXSDloZGNVaytUZ21ncFV0QnB4Tm42TzNrPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIyNDE4MTRlOC1hMDcxLTcwNjQtMWFhNy1kNWYxM2Q3N2M1MTYiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6Ly9jb2duaXRvLWlkcC51cy1lYXN0LTEuYW1hem9uYXdzLmNvbS91cy1lYXN0LTFfMWRiQXpCMXY5IiwiY29nbml0bzp1c2VybmFtZSI6IjI0MTgxNGU4LWEwNzEtNzA2NC0xYWE3LWQ1ZjEzZDc3YzUxNiIsIm9yaWdpbl9qdGkiOiI2Y2M4NWJkYi0xNmNjLTRhYWMtYjBhYS03MTVjMDUwYzQxNzIiLCJhdWQiOiI3cjVuY284OTJpZnF0cnFxdGoybm5wanJvcSIsImV2ZW50X2lkIjoiYjg3ZTYyZTctNjRjZC00NmUzLTk0NDQtZTEzZjk5MjMyZTJjIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3ODQyMDg1MzgsImV4cCI6MTc4NDIxMjEzOCwiaWF0IjoxNzg0MjA4NTM4LCJqdGkiOiJlYzViNjgwMS05NDNmLTRkMDItOGMyZS1jM2RkZDAwNzMyYzYiLCJlbWFpbCI6Imxpc2Fzb3JvMTk4OUBnbWFpbC5jb20ifQ.MrCEdbtgBKztsmetH0zCbQL9AMFvGnc-ICIfnAgPBWCJIA8Ucv4l0aZL46NM1b2DJ2yj4TBErH9rPdjI1EmgR9taRPdIYUd6mxG6gh6TFRuHIfN2SGzrONI3gBhbRQimReTIhwehJKqbBBiLbIsogAjhEhujv_09LkJAefsZiZ_PAz5_35kZkWPuCYWU9KY92qwl58jTUhJGBrrxSQzr3yAT5VfMD99d-QGB3-sM7iHOGNxws86K2C33sl2LZtWup3dZSiYK45kwG9MVS937sHepQ_7OmS4UwvukDqEmpqHlK6IkJ5Gj65Sqn9fGS3eGuiBJXp3g0XhXoOruYwGgeQ")
-                .build()
-            val response = client.newCall(request).execute()
-            val code = response.code
-            val bodyString = response.body?.string()
-
-            Log.d(TAG, "AWS API Response Code: $code")
-            Log.d(TAG, "AWS API Response Body: $bodyString")
-
-            if (response.isSuccessful && bodyString != null) {
+                .addHeader("Authorization", "Bearer $token")
 
                 Log.d(TAG, "FULL RESPONSE BODY: $bodyString")
 
